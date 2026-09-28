@@ -87,6 +87,10 @@ function AppRoutes() {
       <Route path="/recipes/diet/weight-loss" element={<ProtectedRoute><RecipeListPage category="diet" subCategory="weight-loss" title="Weight Loss Recipes" subtitle="Low-calorie recipes to support your weight loss journey" /></ProtectedRoute>} />
       <Route path="/recipes/diet/weight-gain" element={<ProtectedRoute><RecipeListPage category="diet" subCategory="weight-gain" title="Weight Gain Recipes" subtitle="High-calorie recipes for healthy weight gain" /></ProtectedRoute>} />
       <Route path="/recipes/normal" element={<ProtectedRoute><RecipeListPage category="normal" title="Normal Recipes" subtitle="Everyday recipes for all occasions" /></ProtectedRoute>} />
+      <Route path="/recipes/breakfast" element={<ProtectedRoute><RecipeListPage mealType="breakfast" title="Breakfast Recipes" subtitle="Start your day with a healthy meal" /></ProtectedRoute>} />
+      <Route path="/recipes/lunch" element={<ProtectedRoute><RecipeListPage mealType="lunch" title="Lunch Recipes" subtitle="Midday meals to keep you going" /></ProtectedRoute>} />
+      <Route path="/recipes/dinner" element={<ProtectedRoute><RecipeListPage mealType="dinner" title="Dinner Recipes" subtitle="Complete meals for the end of the day" /></ProtectedRoute>} />
+      <Route path="/recipes/beverages" element={<ProtectedRoute><RecipeListPage subCategory="beverages" title="Beverages" subtitle="Healthy drinks and refreshing beverages" /></ProtectedRoute>} />
       <Route path="/recipes/desserts" element={<ProtectedRoute><RecipeListPage category="desserts" title="Desserts" subtitle="Sweet treats and dessert recipes" /></ProtectedRoute>} />
       <Route path="/recipes/:recipeId" element={<ProtectedRoute><RecipeDetailPage /></ProtectedRoute>} />
 

@@ -46,10 +46,24 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     { to: '/health-insights', icon: Lightbulb, label: 'Health Insights' },
   ];
 
-  const recipeSubItems = [
+  const dietSubItems = [
     { to: '/recipes/diet/weight-loss', label: 'Weight Loss' },
     { to: '/recipes/diet/weight-gain', label: 'Weight Gain' },
   ];
+
+  const recipeCategoryItems = [
+    { to: '/recipes/normal', label: 'Normal' },
+    { to: '/recipes/breakfast', label: 'Breakfast' },
+    { to: '/recipes/lunch', label: 'Lunch' },
+    { to: '/recipes/dinner', label: 'Dinner' },
+    { to: '/recipes/beverages', label: 'Beverages' },
+    { to: '/recipes/desserts', label: 'Desserts' },
+  ];
+
+  function isCategoryActive(path: string): boolean {
+    if (path === '/recipes/normal') return location.pathname === path;
+    return location.pathname === path;
+  }
 
   return (
     <>
@@ -108,7 +122,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
             </button>
 
             {recipesExpanded && (
-              <div className="ml-4 mt-1 space-y-1 animate-expand">
+              <div className="ml-4 mt-1 space-y-1 animate-expand overflow-hidden">
                 {/* Diet sub-expandable */}
                 <div>
                   <button
@@ -121,8 +135,8 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                     {dietExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                   </button>
                   {dietExpanded && (
-                    <div className="ml-4 mt-1 space-y-0.5 animate-expand">
-                      {recipeSubItems.map(sub => (
+                    <div className="ml-4 mt-1 space-y-0.5 animate-expand overflow-hidden">
+                      {dietSubItems.map(sub => (
                         <NavLink
                           key={sub.to}
                           to={sub.to}
@@ -143,25 +157,18 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                   )}
                 </div>
 
-                <NavLink
-                  to="/recipes/normal"
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    `nav-item text-sm ${isActive ? 'text-green-600 dark:text-green-400 font-semibold' : ''}`
-                  }
-                >
-                  <span className="pl-1">Normal</span>
-                </NavLink>
-
-                <NavLink
-                  to="/recipes/desserts"
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    `nav-item text-sm ${isActive ? 'text-green-600 dark:text-green-400 font-semibold' : ''}`
-                  }
-                >
-                  <span className="pl-1">Desserts</span>
-                </NavLink>
+                {recipeCategoryItems.map(item => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={onClose}
+                    className={({ isActive }) =>
+                      `nav-item text-sm ${isActive ? 'text-green-600 dark:text-green-400 font-semibold' : ''}`
+                    }
+                  >
+                    <span className="pl-1">{item.label}</span>
+                  </NavLink>
+                ))}
               </div>
             )}
           </div>

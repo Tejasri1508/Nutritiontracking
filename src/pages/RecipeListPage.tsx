@@ -11,6 +11,7 @@ import { LoadingState, EmptyState } from '@/components/ui/States';
 interface RecipeListPageProps {
   category?: 'diet' | 'normal' | 'desserts';
   subCategory?: string;
+  mealType?: string;
   title: string;
   subtitle?: string;
 }
@@ -31,7 +32,7 @@ const prepTimeFilters = [
   { label: '60+ min', max: Infinity },
 ];
 
-export function RecipeListPage({ category, subCategory, title, subtitle }: RecipeListPageProps) {
+export function RecipeListPage({ category, subCategory, mealType, title, subtitle }: RecipeListPageProps) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -51,12 +52,13 @@ export function RecipeListPage({ category, subCategory, title, subtitle }: Recip
       let query = supabase.from('recipes').select('*');
       if (category) query = query.eq('category', category);
       if (subCategory) query = query.eq('sub_category', subCategory);
+      if (mealType) query = query.eq('meal_type', mealType);
       const { data } = await query.order('created_at', { ascending: true });
       setRecipes((data as Recipe[]) || []);
       setLoading(false);
     }
     fetchRecipes();
-  }, [category, subCategory]);
+  }, [category, subCategory, mealType]);
 
   useEffect(() => {
     async function fetchFavorites() {
@@ -74,9 +76,10 @@ export function RecipeListPage({ category, subCategory, title, subtitle }: Recip
       if (search) {
         const q = search.toLowerCase();
         const matchName = recipe.title.toLowerCase().includes(q);
+        const matchDesc = recipe.description?.toLowerCase().includes(q);
         const matchIngredient = recipe.ingredients?.some(i => i.toLowerCase().includes(q));
         const matchTags = recipe.tags?.some(t => t.toLowerCase().includes(q));
-        if (!matchName && !matchIngredient && !matchTags) return false;
+        if (!matchName && !matchDesc && !matchIngredient && !matchTags) return false;
       }
       if (activeCalorieFilter !== null) {
         const f = calorieFilters[activeCalorieFilter];
