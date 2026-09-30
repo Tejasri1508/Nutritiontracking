@@ -6,6 +6,7 @@ import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { LandingPage } from '@/pages/LandingPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { FoodScannerPage } from '@/pages/FoodScannerPage';
 import { CaloriesPage } from '@/pages/CaloriesPage';
@@ -93,6 +94,8 @@ function AppRoutes() {
       <Route path="/recipes/beverages" element={<ProtectedRoute><RecipeListPage subCategory="beverages" title="Beverages" subtitle="Healthy drinks and refreshing beverages" /></ProtectedRoute>} />
       <Route path="/recipes/desserts" element={<ProtectedRoute><RecipeListPage category="desserts" title="Desserts" subtitle="Sweet treats and dessert recipes" /></ProtectedRoute>} />
       <Route path="/recipes/:recipeId" element={<ProtectedRoute><RecipeDetailPage /></ProtectedRoute>} />
+
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Heart, Mail, Lock, Eye, EyeOff, ArrowLeft, X, Send, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { Modal } from '@/components/ui/Modal';
 
 export function LoginPage() {
-  const { signIn } = useAuth();
+  const { signIn, resetPassword } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -14,6 +15,10 @@ export function LoginPage() {
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSending, setResetSending] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -35,6 +40,39 @@ export function LoginPage() {
       showToast('Welcome back!', 'success');
       navigate('/dashboard');
     }
+  }
+
+  function openResetModal() {
+    setResetEmail(email);
+    setResetSent(false);
+    setShowResetModal(true);
+  }
+
+  async function handleResetPassword(e: FormEvent) {
+    e.preventDefault();
+    if (!resetEmail) {
+      showToast('Please enter your email', 'error');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetEmail)) {
+      showToast('Please enter a valid email', 'error');
+      return;
+    }
+    setResetSending(true);
+    const { error: resetError } = await resetPassword(resetEmail);
+    if (resetError) {
+      showToast(resetError, 'error');
+    } else {
+      setResetSent(true);
+      showToast('Password reset email sent!', 'success');
+    }
+    setResetSending(false);
+  }
+
+  function closeResetModal() {
+    setShowResetModal(false);
+    setResetSent(false);
+    setResetEmail('');
   }
 
   return (
@@ -133,7 +171,7 @@ export function LoginPage() {
                 />
                 <span className="text-neutral-600 dark:text-neutral-400">Remember me</span>
               </label>
-              <button type="button" className="text-green-600 hover:underline">Forgot password?</button>
+              <button type="button" onClick={openResetModal} className="text-green-600 hover:underline">Forgot password?</button>
             </div>
 
             <button type="submit" disabled={loading} className="btn-primary w-full">
@@ -147,6 +185,57 @@ export function LoginPage() {
           </p>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      <Modal open={showResetModal} onClose={closeResetModal} title="Reset Password">
+        {resetSent ? (
+          <div className="space-y-4 text-center">
+            <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto">
+              <CheckCircle className="w-7 h-7 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Check Your Email</h3>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                We've sent a password reset link to <span className="font-medium text-neutral-700 dark:text-neutral-300">{resetEmail}</span>. Click the link in the email to set a new password.
+              </p>
+            </div>
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-left">
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                If you don't see the email within a few minutes, check your spam folder. The link will expire after a limited time.
+              </p>
+            </div>
+            <button onClick={closeResetModal} className="btn-secondary w-full">Close</button>
+          </div>
+        ) : (
+          <form onSubmit={handleResetPassword} className="space-y-4">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              Enter your email address and we'll send you a link to reset your password.
+            </p>
+            <div>
+              <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5 block">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="input-field pl-10"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <button type="submit" disabled={resetSending} className="btn-primary w-full flex items-center justify-center gap-2">
+              {resetSending ? (
+                <>Sending...</>
+              ) : (
+                <><Send className="w-4 h-4" /> Send Reset Link</>
+              )}
+            </button>
+            <button type="button" onClick={closeResetModal} className="btn-secondary w-full">Cancel</button>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }
