@@ -46,8 +46,8 @@ export function ResetPasswordPage() {
     });
 
     const timeout = setTimeout(() => {
-      setFailed('This password reset link is invalid or has expired. Please request a new reset link.');
-    }, 5000);
+      setFailed('This password reset link is invalid or has expired. Please request a new reset link from the login page.');
+    }, 10000);
 
     return () => {
       subscription.unsubscribe();
