@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, Mail, Lock, Eye, EyeOff, ArrowLeft, X, Send, CheckCircle } from 'lucide-react';
+import { Heart, Mail, Lock, Eye, EyeOff, ArrowLeft, CheckCircle, KeyRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { supabase } from '@/lib/supabase';
 import { Modal } from '@/components/ui/Modal';
 
 export function LoginPage() {
-  const { signIn, resetPassword } = useAuth();
+  const { signIn } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -17,8 +18,11 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
-  const [resetSending, setResetSending] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
+  const [resetCurrentPassword, setResetCurrentPassword] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -44,35 +48,63 @@ export function LoginPage() {
 
   function openResetModal() {
     setResetEmail(email);
-    setResetSent(false);
+    setResetCurrentPassword('');
+    setResetNewPassword('');
+    setResetConfirmPassword('');
+    setResetDone(false);
     setShowResetModal(true);
   }
 
   async function handleResetPassword(e: FormEvent) {
     e.preventDefault();
-    if (!resetEmail) {
-      showToast('Please enter your email', 'error');
+    if (!resetEmail || !resetCurrentPassword || !resetNewPassword) {
+      showToast('Please fill in all fields', 'error');
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetEmail)) {
       showToast('Please enter a valid email', 'error');
       return;
     }
-    setResetSending(true);
-    const { error: resetError } = await resetPassword(resetEmail);
-    if (resetError) {
-      showToast(resetError, 'error');
-    } else {
-      setResetSent(true);
-      showToast('Password reset email sent!', 'success');
+    if (resetNewPassword.length < 6) {
+      showToast('New password must be at least 6 characters', 'error');
+      return;
     }
-    setResetSending(false);
+    if (resetNewPassword !== resetConfirmPassword) {
+      showToast('New passwords do not match', 'error');
+      return;
+    }
+
+    setResetLoading(true);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: resetEmail,
+      password: resetCurrentPassword,
+    });
+    if (signInError) {
+      showToast('Current password is incorrect', 'error');
+      setResetLoading(false);
+      return;
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({ password: resetNewPassword });
+    if (updateError) {
+      showToast(updateError.message, 'error');
+      setResetLoading(false);
+      return;
+    }
+
+    await supabase.auth.signOut();
+    setResetDone(true);
+    showToast('Password changed successfully! You can now log in with your new password.', 'success');
+    setResetLoading(false);
   }
 
   function closeResetModal() {
     setShowResetModal(false);
-    setResetSent(false);
+    setResetDone(false);
     setResetEmail('');
+    setResetCurrentPassword('');
+    setResetNewPassword('');
+    setResetConfirmPassword('');
   }
 
   return (
@@ -186,30 +218,25 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Forgot Password Modal */}
+      {/* Reset Password Modal */}
       <Modal open={showResetModal} onClose={closeResetModal} title="Reset Password">
-        {resetSent ? (
+        {resetDone ? (
           <div className="space-y-4 text-center">
             <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto">
               <CheckCircle className="w-7 h-7 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Check Your Email</h3>
+              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Password Changed!</h3>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                We've sent a password reset link to <span className="font-medium text-neutral-700 dark:text-neutral-300">{resetEmail}</span>. Click the link in the email to set a new password.
+                Your password has been updated successfully. You can now log in with your new password.
               </p>
             </div>
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-left">
-              <p className="text-xs text-blue-600 dark:text-blue-400">
-                If you don't see the email within a few minutes, check your spam folder. The link will expire after a limited time.
-              </p>
-            </div>
-            <button onClick={closeResetModal} className="btn-secondary w-full">Close</button>
+            <button onClick={closeResetModal} className="btn-primary w-full">Done</button>
           </div>
         ) : (
           <form onSubmit={handleResetPassword} className="space-y-4">
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Enter your email address and we'll send you a link to reset your password.
+              Enter your email, current password, and a new password to reset it instantly — no email link needed.
             </p>
             <div>
               <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5 block">Email Address</label>
@@ -225,12 +252,47 @@ export function LoginPage() {
                 />
               </div>
             </div>
-            <button type="submit" disabled={resetSending} className="btn-primary w-full flex items-center justify-center gap-2">
-              {resetSending ? (
-                <>Sending...</>
-              ) : (
-                <><Send className="w-4 h-4" /> Send Reset Link</>
-              )}
+            <div>
+              <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5 block">Current Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input
+                  type="password"
+                  value={resetCurrentPassword}
+                  onChange={e => setResetCurrentPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="input-field pl-10"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5 block">New Password</label>
+              <div className="relative">
+                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input
+                  type="password"
+                  value={resetNewPassword}
+                  onChange={e => setResetNewPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="input-field pl-10"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5 block">Confirm New Password</label>
+              <div className="relative">
+                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input
+                  type="password"
+                  value={resetConfirmPassword}
+                  onChange={e => setResetConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="input-field pl-10"
+                />
+              </div>
+            </div>
+            <button type="submit" disabled={resetLoading} className="btn-primary w-full flex items-center justify-center gap-2">
+              {resetLoading ? 'Updating...' : (<><KeyRound className="w-4 h-4" /> Reset Password</>)}
             </button>
             <button type="button" onClick={closeResetModal} className="btn-secondary w-full">Cancel</button>
           </form>
