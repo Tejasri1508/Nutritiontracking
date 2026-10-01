@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, Lock, Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Heart, Lock, Eye, EyeOff, ArrowLeft, CheckCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/context/ToastContext';
 
@@ -13,6 +13,47 @@ export function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [verifying, setVerifying] = useState(true);
+  const [sessionReady, setSessionReady] = useState(false);
+
+  useEffect(() => {
+    let done = false;
+
+    function setReady() {
+      if (done) return;
+      done = true;
+      setSessionReady(true);
+      setVerifying(false);
+    }
+
+    function setFailed(msg: string) {
+      if (done) return;
+      done = true;
+      setError(msg);
+      setVerifying(false);
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        setReady();
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || session) {
+        setReady();
+      }
+    });
+
+    const timeout = setTimeout(() => {
+      setFailed('This password reset link is invalid or has expired. Please request a new reset link.');
+    }, 5000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -53,7 +94,20 @@ export function ResetPasswordPage() {
           <span className="font-bold text-neutral-900 dark:text-neutral-100">Nutrition Tracker</span>
         </Link>
 
-        {success ? (
+        {verifying ? (
+          <div className="card text-center space-y-3">
+            <Loader2 className="w-8 h-8 text-green-500 animate-spin mx-auto" />
+            <p className="text-sm text-neutral-500">Verifying reset link...</p>
+          </div>
+        ) : !sessionReady && !success ? (
+          <div className="card text-center space-y-4">
+            <h2 className="text-xl font-bold text-red-600 dark:text-red-400">Link Expired</h2>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">{error}</p>
+            <Link to="/login" className="btn-primary w-full block text-center">
+              Back to Login
+            </Link>
+          </div>
+        ) : success ? (
           <div className="card text-center space-y-4">
             <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto">
               <CheckCircle className="w-7 h-7 text-green-600 dark:text-green-400" />
@@ -62,7 +116,7 @@ export function ResetPasswordPage() {
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
               Your password has been changed successfully. You can now log in with your new password.
             </p>
-            <button onClick={() => navigate('/login')} className="btn-primary w-full">
+            <button onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="btn-primary w-full">
               Go to Login
             </button>
           </div>

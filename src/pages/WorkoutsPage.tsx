@@ -39,6 +39,7 @@ export function WorkoutsPage() {
   const [cameraActive, setCameraActive] = useState(false);
   const cameraRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const filteredWorkouts = activeCategory === 'all'
     ? workoutLibrary
@@ -107,19 +108,27 @@ export function WorkoutsPage() {
   async function startCamera() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (cameraRef.current) {
-        cameraRef.current.srcObject = stream;
-        setCameraActive(true);
-      }
-    } catch {
-      showToast('Camera access not available. Form checking requires camera access.', 'error');
+      streamRef.current = stream;
+      setCameraActive(true);
+    } catch (err) {
+      showToast('Camera access denied or not available. Please allow camera permissions in your browser settings.', 'error');
+      setCameraActive(false);
     }
   }
 
+  useEffect(() => {
+    if (cameraActive && streamRef.current && cameraRef.current) {
+      cameraRef.current.srcObject = streamRef.current;
+      cameraRef.current.play().catch(() => {});
+    }
+  }, [cameraActive]);
+
   function stopCamera() {
-    if (cameraRef.current?.srcObject) {
-      const stream = cameraRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(t => t.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    if (cameraRef.current) {
       cameraRef.current.srcObject = null;
     }
     setCameraActive(false);
@@ -313,9 +322,14 @@ export function WorkoutsPage() {
               {/* Right: Camera for form checking */}
               <div className="space-y-3">
                 <div className="relative rounded-2xl overflow-hidden bg-neutral-900 aspect-video">
-                  {cameraActive ? (
-                    <video ref={cameraRef} autoPlay playsInline className="w-full h-full object-cover" />
-                  ) : (
+                  <video
+                    ref={cameraRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
+                  />
+                  {!cameraActive && (
                     <div className="w-full h-full flex flex-col items-center justify-center text-neutral-500">
                       <Camera className="w-12 h-12 mb-2" />
                       <p className="text-sm">Camera preview for form checking</p>
