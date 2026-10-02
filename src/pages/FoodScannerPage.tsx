@@ -77,9 +77,10 @@ export function FoodScannerPage() {
     }
     const reader = new FileReader();
     reader.onload = ev => {
-      setImagePreview(ev.target?.result as string);
+      const dataUrl = ev.target?.result as string;
+      setImagePreview(dataUrl);
       setMode('preview');
-      analyzeImage();
+      analyzeImage(dataUrl);
     };
     reader.readAsDataURL(file);
   }
@@ -111,7 +112,7 @@ export function FoodScannerPage() {
     setImagePreview(dataUrl);
     stopCamera();
     setMode('preview');
-    analyzeImage();
+    analyzeImage(dataUrl);
   }
 
   function stopCamera() {
@@ -123,7 +124,7 @@ export function FoodScannerPage() {
     if (mode === 'camera') setMode('idle');
   }
 
-  function analyzeImage() {
+  function analyzeImage(imageData: string | null) {
     setDetected(null);
     setAnalyzeError('');
     setMode('analyzing');
@@ -141,13 +142,13 @@ export function FoodScannerPage() {
       return;
     }
 
-    if (!imagePreview) {
+    if (!imageData) {
       showToast('No image to analyze', 'error');
       setMode('preview');
       return;
     }
 
-    const base64Data = imagePreview.split(',')[1];
+    const base64Data = imageData.split(',')[1];
 
     fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
       method: 'POST',
@@ -336,7 +337,7 @@ export function FoodScannerPage() {
               <div className="flex-1">
                 <p className="text-xs font-medium text-amber-700 dark:text-amber-400">Could not analyze image</p>
                 <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">{analyzeError}</p>
-                <button onClick={() => analyzeImage()} className="text-xs text-amber-700 dark:text-amber-400 underline mt-1.5">Try again</button>
+                <button onClick={() => analyzeImage(imagePreview)} className="text-xs text-amber-700 dark:text-amber-400 underline mt-1.5">Try again</button>
               </div>
             </div>
           )}
