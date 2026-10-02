@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Heart, Mail, Lock, Eye, EyeOff, ArrowLeft, CheckCircle, KeyRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { supabase } from '@/lib/supabase';
 import { Modal } from '@/components/ui/Modal';
 
 export function LoginPage() {
@@ -18,7 +17,6 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
-  const [resetCurrentPassword, setResetCurrentPassword] = useState('');
   const [resetNewPassword, setResetNewPassword] = useState('');
   const [resetConfirmPassword, setResetConfirmPassword] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
@@ -48,7 +46,6 @@ export function LoginPage() {
 
   function openResetModal() {
     setResetEmail(email);
-    setResetCurrentPassword('');
     setResetNewPassword('');
     setResetConfirmPassword('');
     setResetDone(false);
@@ -57,7 +54,7 @@ export function LoginPage() {
 
   async function handleResetPassword(e: FormEvent) {
     e.preventDefault();
-    if (!resetEmail || !resetCurrentPassword || !resetNewPassword) {
+    if (!resetEmail || !resetNewPassword) {
       showToast('Please fill in all fields', 'error');
       return;
     }
@@ -75,26 +72,27 @@ export function LoginPage() {
     }
 
     setResetLoading(true);
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: resetEmail,
-      password: resetCurrentPassword,
-    });
-    if (signInError) {
-      showToast('Current password is incorrect', 'error');
-      setResetLoading(false);
-      return;
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-password`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ email: resetEmail, newPassword: resetNewPassword }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        showToast(data.error || 'Failed to reset password', 'error');
+        setResetLoading(false);
+        return;
+      }
+      setResetDone(true);
+      showToast('Password changed successfully! You can now log in with your new password.', 'success');
+    } catch {
+      showToast('Network error. Please try again.', 'error');
     }
-
-    const { error: updateError } = await supabase.auth.updateUser({ password: resetNewPassword });
-    if (updateError) {
-      showToast(updateError.message, 'error');
-      setResetLoading(false);
-      return;
-    }
-
-    await supabase.auth.signOut();
-    setResetDone(true);
-    showToast('Password changed successfully! You can now log in with your new password.', 'success');
     setResetLoading(false);
   }
 
@@ -102,7 +100,6 @@ export function LoginPage() {
     setShowResetModal(false);
     setResetDone(false);
     setResetEmail('');
-    setResetCurrentPassword('');
     setResetNewPassword('');
     setResetConfirmPassword('');
   }
@@ -236,7 +233,7 @@ export function LoginPage() {
         ) : (
           <form onSubmit={handleResetPassword} className="space-y-4">
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Enter your email, current password, and a new password to reset it instantly — no email link needed.
+              Enter your email and a new password to reset it instantly — no email link needed.
             </p>
             <div>
               <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5 block">Email Address</label>
@@ -249,19 +246,6 @@ export function LoginPage() {
                   placeholder="you@example.com"
                   className="input-field pl-10"
                   autoFocus
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5 block">Current Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                <input
-                  type="password"
-                  value={resetCurrentPassword}
-                  onChange={e => setResetCurrentPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="input-field pl-10"
                 />
               </div>
             </div>
