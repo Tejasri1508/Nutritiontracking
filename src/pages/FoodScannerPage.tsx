@@ -16,7 +16,7 @@ interface DetectedFood {
 
 type Mode = 'idle' | 'camera' | 'preview' | 'analyzing' | 'result' | 'manual';
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-3.8-flash';
 
 const ANALYSIS_PROMPT = `You are a nutrition expert. Analyze this food image and return ONLY a JSON object (no markdown, no code fences) with these exact fields:
 {
