@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Camera, Upload, Loader2, ScanLine, Edit2, Check, X, Calculator, Sparkles } from 'lucide-react';
+import { Camera, Upload, Loader2, ScanLine, Edit2, Check, X, Calculator, Sparkles, AlertCircle } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
 import { AddToCaloriesModal } from '@/components/AddToCaloriesModal';
 
@@ -14,16 +14,29 @@ interface DetectedFood {
   confidence: number;
 }
 
-const sampleFoods: DetectedFood[] = [
-  { foodName: 'Grilled Chicken Salad', calories: 450, protein: 35, carbohydrates: 25, fat: 20, fiber: 6, servingSize: '1 bowl', confidence: 92 },
-  { foodName: 'Vegetable Rice Bowl', calories: 380, protein: 9, carbohydrates: 68, fat: 12, fiber: 5, servingSize: '1 plate', confidence: 87 },
-  { foodName: 'Avocado Toast', calories: 320, protein: 10, carbohydrates: 35, fat: 16, fiber: 8, servingSize: '2 slices', confidence: 85 },
-  { foodName: 'Berry Smoothie Bowl', calories: 250, protein: 8, carbohydrates: 45, fat: 5, fiber: 7, servingSize: '1 bowl', confidence: 78 },
-  { foodName: 'Chocolate Brownie', calories: 320, protein: 5, carbohydrates: 42, fat: 15, fiber: 2, servingSize: '1 piece', confidence: 90 },
-  { foodName: 'Pancakes with Syrup', calories: 520, protein: 8, carbohydrates: 85, fat: 18, fiber: 3, servingSize: '3 pancakes', confidence: 81 },
-];
-
 type Mode = 'idle' | 'camera' | 'preview' | 'analyzing' | 'result' | 'manual';
+
+const GEMINI_MODEL = 'gemini-2.0-flash';
+
+const ANALYSIS_PROMPT = `You are a nutrition expert. Analyze this food image and return ONLY a JSON object (no markdown, no code fences) with these exact fields:
+{
+  "foodName": "the specific name of the dish or food item shown",
+  "calories": estimated calories as a number,
+  "protein": protein in grams as a number,
+  "carbohydrates": carbs in grams as a number,
+  "fat": fat in grams as a number,
+  "fiber": fiber in grams as a number,
+  "servingSize": "e.g., 1 plate, 1 bowl, 2 slices",
+  "confidence": your confidence level 0-100 as a number
+}
+If the image does not contain food, return: {"foodName":"Not a food item","calories":0,"protein":0,"carbohydrates":0,"fat":0,"fiber":0,"servingSize":"","confidence":0}`;
+
+const FALLBACK_FOODS: DetectedFood[] = [
+  { foodName: 'Grilled Chicken Salad', calories: 450, protein: 35, carbohydrates: 25, fat: 20, fiber: 6, servingSize: '1 bowl', confidence: 50 },
+  { foodName: 'Vegetable Rice Bowl', calories: 380, protein: 9, carbohydrates: 68, fat: 12, fiber: 5, servingSize: '1 plate', confidence: 50 },
+  { foodName: 'Avocado Toast', calories: 320, protein: 10, carbohydrates: 35, fat: 16, fiber: 8, servingSize: '2 slices', confidence: 50 },
+  { foodName: 'Berry Smoothie Bowl', calories: 250, protein: 8, carbohydrates: 45, fat: 5, fiber: 7, servingSize: '1 bowl', confidence: 50 },
+];
 
 export function FoodScannerPage() {
   const { showToast } = useToast();
@@ -48,6 +61,8 @@ export function FoodScannerPage() {
   });
   const [manualServings, setManualServings] = useState(1);
   const [manualResult, setManualResult] = useState<DetectedFood | null>(null);
+
+  const [analyzeError, setAnalyzeError] = useState('');
 
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -110,14 +125,75 @@ export function FoodScannerPage() {
 
   function analyzeImage() {
     setDetected(null);
+    setAnalyzeError('');
     setMode('analyzing');
-    setTimeout(() => {
-      const sample = sampleFoods[Math.floor(Math.random() * sampleFoods.length)];
-      setDetected(sample);
-      setEditedFood(sample);
-      setMode('result');
-      showToast('Food detected! Please verify the food name and nutrition below.', 'success');
-    }, 2500);
+
+    const apiKey = localStorage.getItem('gemini_api_key');
+    if (!apiKey) {
+      setTimeout(() => {
+        const sample = FALLBACK_FOODS[Math.floor(Math.random() * FALLBACK_FOODS.length)];
+        setDetected(sample);
+        setEditedFood(sample);
+        setMode('result');
+        setAnalyzeError('Demo mode — add a free Gemini API key in Settings for real food recognition.');
+        showToast('Running in demo mode. Add a Gemini API key in Settings for real recognition.', 'info');
+      }, 2000);
+      return;
+    }
+
+    if (!imagePreview) {
+      showToast('No image to analyze', 'error');
+      setMode('preview');
+      return;
+    }
+
+    const base64Data = imagePreview.split(',')[1];
+
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: ANALYSIS_PROMPT },
+            { inline_data: { mime_type: 'image/jpeg', data: base64Data } },
+          ],
+        }],
+        generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
+      }),
+    })
+      .then(async res => {
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody?.error?.message || `API error (${res.status})`);
+        }
+        const data = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error('No response from AI');
+        const parsed = JSON.parse(text);
+        if (!parsed.foodName || parsed.foodName === 'Not a food item') {
+          throw new Error('No food detected in this image. Try a clearer photo.');
+        }
+        const result: DetectedFood = {
+          foodName: parsed.foodName,
+          calories: Math.round(parsed.calories || 0),
+          protein: Math.round((parsed.protein || 0) * 10) / 10,
+          carbohydrates: Math.round((parsed.carbohydrates || 0) * 10) / 10,
+          fat: Math.round((parsed.fat || 0) * 10) / 10,
+          fiber: Math.round((parsed.fiber || 0) * 10) / 10,
+          servingSize: parsed.servingSize || '1 serving',
+          confidence: Math.round(parsed.confidence || 80),
+        };
+        setDetected(result);
+        setEditedFood(result);
+        setMode('result');
+        showToast(`Detected: ${result.foodName}`, 'success');
+      })
+      .catch((err) => {
+        setAnalyzeError(err.message);
+        setMode('preview');
+        showToast(err.message || 'Failed to analyze image', 'error');
+      });
   }
 
   function startEditing() {
@@ -250,7 +326,18 @@ export function FoodScannerPage() {
                 <Loader2 className="w-12 h-12 text-green-500 animate-spin absolute inset-0 opacity-30" />
               </div>
               <p className="text-sm font-medium text-neutral-600 dark:text-neutral-400 mt-3">Analyzing your food...</p>
-              <p className="text-xs text-neutral-400 mt-1">Detecting food item and estimating nutrition</p>
+              <p className="text-xs text-neutral-400 mt-1">AI is identifying the food item and estimating nutrition</p>
+            </div>
+          )}
+
+          {mode === 'preview' && analyzeError && (
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-400">Could not analyze image</p>
+                <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">{analyzeError}</p>
+                <button onClick={() => analyzeImage()} className="text-xs text-amber-700 dark:text-amber-400 underline mt-1.5">Try again</button>
+              </div>
             </div>
           )}
 
@@ -483,7 +570,9 @@ export function FoodScannerPage() {
       {/* Info note */}
       <div className="card bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-900/30">
         <p className="text-xs text-blue-700 dark:text-blue-400">
-          The food recognition system is designed to connect to a real AI nutrition API. Currently running in demo mode — always verify the detected food name before adding. Use the "Calculate Manually" tab to enter your own food and compute nutrition totals.
+          {localStorage.getItem('gemini_api_key')
+            ? 'AI food recognition is active. The scanner uses Google Gemini to identify the actual food in your photos. Always verify the detected name and nutrition before adding to your tracker.'
+            : 'Demo mode: the scanner picks a random food name. Add a free Gemini API key in Settings to enable real AI food recognition that identifies the actual food in your photos.'}
         </p>
       </div>
 

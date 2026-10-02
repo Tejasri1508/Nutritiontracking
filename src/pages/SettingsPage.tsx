@@ -1,8 +1,8 @@
-import { Moon, Sun, Bell, Droplets, Clock, Settings as SettingsIcon, Info } from 'lucide-react';
+import { Moon, Sun, Bell, Droplets, Clock, Settings as SettingsIcon, Info, ScanLine, KeyRound, ExternalLink, Check } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
@@ -15,6 +15,30 @@ export function SettingsPage() {
     sleep: true,
   });
   const [reminderInterval, setReminderInterval] = useState('2');
+  const [geminiKey, setGeminiKey] = useState('');
+  const [keySaved, setKeySaved] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('gemini_api_key');
+    if (stored) setGeminiKey(stored);
+  }, []);
+
+  function saveApiKey() {
+    if (!geminiKey.trim()) {
+      showToast('Please enter an API key', 'error');
+      return;
+    }
+    localStorage.setItem('gemini_api_key', geminiKey.trim());
+    setKeySaved(true);
+    showToast('AI Scanner key saved! Food recognition is now active.', 'success');
+    setTimeout(() => setKeySaved(false), 2500);
+  }
+
+  function removeApiKey() {
+    localStorage.removeItem('gemini_api_key');
+    setGeminiKey('');
+    showToast('AI Scanner key removed. Scanner will use demo mode.', 'info');
+  }
 
   function toggleReminder(key: keyof typeof reminders) {
     setReminders(prev => ({ ...prev, [key]: !prev[key] }));
@@ -100,6 +124,50 @@ export function SettingsPage() {
               </button>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* AI Scanner Settings */}
+      <div className="card">
+        <h3 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-4 flex items-center gap-2">
+          <ScanLine className="w-4 h-4" /> AI Food Scanner
+        </h3>
+        <p className="text-xs text-neutral-500 mb-3">
+          Connect a free Google Gemini API key so the food scanner can recognize the actual food in your photos. Get one free at Google AI Studio — no credit card needed, 500 scans per day.
+        </p>
+        <a
+          href="https://aistudio.google.com/apikey"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs text-green-600 hover:underline mb-4"
+        >
+          <ExternalLink className="w-3.5 h-3.5" /> Get a free API key from Google AI Studio
+        </a>
+        <div className="space-y-3">
+          <div>
+            <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5 block">Gemini API Key</label>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input
+                  type="password"
+                  value={geminiKey}
+                  onChange={e => setGeminiKey(e.target.value)}
+                  placeholder="Paste your Gemini API key here"
+                  className="input-field pl-10"
+                />
+              </div>
+              {geminiKey && (
+                <button onClick={removeApiKey} className="btn-secondary text-xs px-3">Remove</button>
+              )}
+            </div>
+          </div>
+          <button onClick={saveApiKey} className="btn-primary text-sm flex items-center justify-center gap-2">
+            {keySaved ? (<><Check className="w-4 h-4" /> Saved!</>) : 'Save API Key'}
+          </button>
+          <p className="text-xs text-neutral-400">
+            Your key is stored only in this browser and is never sent to our server.
+          </p>
         </div>
       </div>
 
