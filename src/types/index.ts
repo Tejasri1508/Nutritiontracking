@@ -13,6 +13,7 @@ export interface Profile {
   water_goal: number;
   step_goal: number;
   sleep_goal: number;
+  health_condition: string;
   profile_image: string | null;
   dark_mode: boolean;
   created_at: string;

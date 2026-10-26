@@ -33,6 +33,93 @@ export function calculateCalorieGoal(
   return Math.round(goalCalories);
 }
 
+export type HealthCondition =
+  | 'none'
+  | 'pcod'
+  | 'pcos'
+  | 'thyroid'
+  | 'diabetes'
+  | 'insulin_resistance'
+  | 'high_bp';
+
+export interface DailyTargets {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number;
+  water: number; // glasses
+  deficitNote: string;
+}
+
+export function getConditionTargets(
+  baseCalories: number,
+  condition: string,
+  gender: string
+): DailyTargets {
+  const c = (condition || 'none') as HealthCondition;
+  let calories = baseCalories;
+  let proteinPct = 0.25;
+  let carbsPct = 0.45;
+  let fatPct = 0.30;
+  let fiber = 25;
+  let water = 8;
+  let note = '';
+
+  if (c === 'pcod' || c === 'pcos' || c === 'insulin_resistance') {
+    calories = Math.max(1200, Math.round(baseCalories * 0.82));
+    proteinPct = 0.30;
+    carbsPct = 0.35;
+    fatPct = 0.35;
+    fiber = 30;
+    water = 10;
+    note =
+      'Lower-carb, higher-protein plan to improve insulin sensitivity. Focus on whole grains, legumes, lean protein, and healthy fats.';
+  } else if (c === 'thyroid') {
+    calories = Math.max(1200, Math.round(baseCalories * 0.85));
+    proteinPct = 0.25;
+    carbsPct = 0.50;
+    fatPct = 0.25;
+    fiber = 30;
+    water = 9;
+    note =
+      'Balanced plan with selenium- and iodine-rich foods. Avoid raw cruciferous vegetables in bulk; cook them.';
+  } else if (c === 'diabetes') {
+    calories = Math.max(1300, Math.round(baseCalories * 0.85));
+    proteinPct = 0.25;
+    carbsPct = 0.40;
+    fatPct = 0.35;
+    fiber = 35;
+    water = 10;
+    note =
+      'Low-glycemic plan with complex carbs, high fiber, and healthy fats to keep blood sugar stable.';
+  } else if (c === 'high_bp') {
+    calories = Math.max(1300, Math.round(baseCalories * 0.90));
+    proteinPct = 0.25;
+    carbsPct = 0.50;
+    fatPct = 0.25;
+    fiber = 30;
+    water = 10;
+    note =
+      'DASH-style plan: low sodium, high potassium from fruits and vegetables, whole grains, and lean protein.';
+  } else {
+    note = 'Balanced deficit plan for steady, sustainable weight loss.';
+  }
+
+  if (gender === 'female' && calories < 1200) calories = 1200;
+  if (gender === 'male' && calories < 1500) calories = 1500;
+
+  return {
+    calories,
+    protein: Math.round((calories * proteinPct) / 4),
+    carbs: Math.round((calories * carbsPct) / 4),
+    fat: Math.round((calories * fatPct) / 9),
+    fiber,
+    water,
+    deficitNote: note,
+  };
+}
+
 export function formatDate(date: Date): string {
   return date.toLocaleDateString('en-US', {
     weekday: 'long',

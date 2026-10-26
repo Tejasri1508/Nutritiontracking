@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ScanLine, Calendar, Droplets, Footprints, Moon,
   Dumbbell, ClipboardList, ShoppingCart, BarChart3, Lightbulb,
   Bell, User, Settings, LogOut, ChevronDown, ChevronRight,
-  UtensilsCrossed, Heart, X
+  UtensilsCrossed, Heart, X, Sunrise
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -40,6 +40,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     { to: '/steps', icon: Footprints, label: 'Steps Tracker' },
     { to: '/sleep', icon: Moon, label: 'Sleep Tracker' },
     { to: '/workouts', icon: Dumbbell, label: 'Exercises / Workouts' },
+    { to: '/daily-routine', icon: Sunrise, label: 'Daily Routine' },
     { to: '/meal-plan', icon: ClipboardList, label: 'Meal Plan' },
     { to: '/grocery-list', icon: ShoppingCart, label: 'Grocery List' },
     { to: '/monthly-summary', icon: BarChart3, label: 'Monthly Summary' },

@@ -15,6 +15,7 @@ import { StepsTrackerPage } from '@/pages/StepsTrackerPage';
 import { SleepTrackerPage } from '@/pages/SleepTrackerPage';
 import { WorkoutsPage } from '@/pages/WorkoutsPage';
 import { MealPlanPage } from '@/pages/MealPlanPage';
+import DailyRoutinePage from '@/pages/DailyRoutinePage';
 import { GroceryListPage } from '@/pages/GroceryListPage';
 import { MonthlySummaryPage } from '@/pages/MonthlySummaryPage';
 import { HealthInsightsPage } from '@/pages/HealthInsightsPage';
@@ -75,6 +76,7 @@ function AppRoutes() {
       <Route path="/sleep" element={<ProtectedRoute><SleepTrackerPage /></ProtectedRoute>} />
       <Route path="/workouts" element={<ProtectedRoute><WorkoutsPage /></ProtectedRoute>} />
       <Route path="/meal-plan" element={<ProtectedRoute><MealPlanPage /></ProtectedRoute>} />
+      <Route path="/daily-routine" element={<ProtectedRoute><DailyRoutinePage /></ProtectedRoute>} />
       <Route path="/grocery-list" element={<ProtectedRoute><GroceryListPage /></ProtectedRoute>} />
       <Route path="/monthly-summary" element={<ProtectedRoute><MonthlySummaryPage /></ProtectedRoute>} />
       <Route path="/health-insights" element={<ProtectedRoute><HealthInsightsPage /></ProtectedRoute>} />

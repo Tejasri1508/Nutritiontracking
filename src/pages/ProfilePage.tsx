@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Camera, Save, Weight, Ruler, Target, Activity } from 'lucide-react';
+import { User, Camera, Save, Weight, Ruler, Target, Activity, HeartPulse } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { supabase } from '@/lib/supabase';
@@ -28,6 +28,7 @@ export function ProfilePage() {
         water_goal: profile.water_goal,
         step_goal: profile.step_goal,
         sleep_goal: profile.sleep_goal,
+        health_condition: profile.health_condition ?? 'none',
       });
     }
   }, [profile]);
@@ -64,6 +65,7 @@ export function ProfilePage() {
       water_goal: form.water_goal,
       step_goal: form.step_goal,
       sleep_goal: form.sleep_goal,
+      health_condition: form.health_condition,
       updated_at: new Date().toISOString(),
     }).eq('id', user.id);
 
@@ -128,6 +130,21 @@ export function ProfilePage() {
               <option value="female">Female</option>
               <option value="other">Other</option>
             </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5 block flex items-center gap-1.5">
+              <HeartPulse className="w-3.5 h-3.5" /> Health Condition (for personalized meal plans)
+            </label>
+            <select value={form.health_condition || 'none'} onChange={e => update('health_condition', e.target.value)} className="input-field">
+              <option value="none">None</option>
+              <option value="pcod">PCOD</option>
+              <option value="pcos">PCOS</option>
+              <option value="thyroid">Thyroid / Hypothyroidism</option>
+              <option value="diabetes">Diabetes / Insulin Resistance</option>
+              <option value="insulin_resistance">Insulin Resistance</option>
+              <option value="high_bp">High Blood Pressure</option>
+            </select>
+            <p className="text-xs text-neutral-400 mt-1">Used to tailor your daily routine and meal plan for weight loss.</p>
           </div>
         </div>
       </div>
